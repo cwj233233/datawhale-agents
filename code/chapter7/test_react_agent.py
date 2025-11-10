@@ -20,16 +20,18 @@ def test_react_agent():
     
     # 注册计算器工具
     try:
-        from hello_agents import calculate
-        tool_registry.register_function("calculate", "执行数学计算，支持基本的四则运算", calculate)
+        from hello_agents.tools import CalculatorTool
+        calculator = CalculatorTool()
+        tool_registry.register_tool(calculator)
         print("✅ 计算器工具注册成功")
     except ImportError:
         print("⚠️ 计算器工具未找到，跳过注册")
 
     # 注册搜索工具（如果可用）
     try:
-        from hello_agents import search
-        tool_registry.register_function("search", "搜索互联网信息", search)
+        from hello_agents.tools import SearchTool
+        search = SearchTool()
+        tool_registry.register_tool(search)
         print("✅ 搜索工具注册成功")
     except ImportError:
         print("⚠️ 搜索工具未找到，跳过注册")
@@ -80,10 +82,11 @@ def test_react_agent():
     print(f"\n📝 对话历史记录: {len(agent.get_history())} 条消息")
     
     # 显示工具使用统计
-    print(f"\n🛠️ 可用工具数量: {len(tool_registry.tools)}")
+    all_tools = tool_registry.get_all_tools()
+    print(f"\n🛠️ 可用工具数量: {len(all_tools)}")
     print("已注册的工具:")
-    for tool_name in tool_registry.tools.keys():
-        print(f"  - {tool_name}")
+    for tool in all_tools:
+        print(f"  - {tool.name}")
     
     print("\n🎉 测试完成！")
 
@@ -100,8 +103,9 @@ def test_custom_prompt():
     
     # 注册计算器工具
     try:
-        from hello_agents import calculate
-        tool_registry.register_tool("calculate", calculate, "数学计算工具")
+        from hello_agents.tools import CalculatorTool
+        calculator = CalculatorTool()
+        tool_registry.register_tool(calculator)
     except ImportError:
         pass
     
