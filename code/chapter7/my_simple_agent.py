@@ -1,7 +1,10 @@
 # my_simple_agent.py
-from typing import Optional, Iterator
-from hello_agents import SimpleAgent, HelloAgentsLLM, Config, Message
+from typing import Optional, Iterator, TYPE_CHECKING
+from hello_agents import SimpleAgent, HelloAgentsLLM, Config, Message, ToolRegistry
 import re
+
+if TYPE_CHECKING:
+    from hello_agents import ToolRegistry
 
 class MySimpleAgent(SimpleAgent):
     """
@@ -148,17 +151,12 @@ class MySimpleAgent(SimpleAgent):
             return f"❌ 错误：未配置工具注册表"
 
         try:
-            # 智能参数解析
-            if tool_name == 'calculator':
-                # 计算器工具直接传入表达式
-                result = self.tool_registry.execute_tool(tool_name, parameters)
-            else:
-                # 其他工具使用智能参数解析
-                param_dict = self._parse_tool_parameters(tool_name, parameters)
-                tool = self.tool_registry.get_tool(tool_name)
-                if not tool:
-                    return f"❌ 错误：未找到工具 '{tool_name}'"
-                result = tool.run(param_dict)
+            # 统一的工具调用方式
+            param_dict = self._parse_tool_parameters(tool_name, parameters)
+            tool = self.tool_registry.get_tool(tool_name)
+            if not tool:
+                return f"❌ 错误：未找到工具 '{tool_name}'"
+            result = tool.run(param_dict)
 
             return f"🔧 工具 {tool_name} 执行结果：\n{result}"
 
@@ -166,30 +164,25 @@ class MySimpleAgent(SimpleAgent):
             return f"❌ 工具调用失败：{str(e)}"
 
     def _parse_tool_parameters(self, tool_name: str, parameters: str) -> dict:
-        """智能解析工具参数"""
+        """
+        智能解析工具参数
+        支持多种格式：
+        - key=value 单参数
+        - key1=value1,key2=value2 多参数
+        - 直接参数值（自动推断为 'input' 或 'query'）
+        """
         param_dict = {}
 
         if '=' in parameters:
-            # 格式: key=value 或 action=search,query=Python
-            if ',' in parameters:
-                # 多个参数：action=search,query=Python,limit=3
-                pairs = parameters.split(',')
-                for pair in pairs:
-                    if '=' in pair:
-                        key, value = pair.split('=', 1)
-                        param_dict[key.strip()] = value.strip()
-            else:
-                # 单个参数：key=value
-                key, value = parameters.split('=', 1)
-                param_dict[key.strip()] = value.strip()
+            # 格式: key=value 或 key1=value1,key2=value2
+            pairs = parameters.split(',')
+            for pair in pairs:
+                if '=' in pair:
+                    key, value = pair.split('=', 1)
+                    param_dict[key.strip()] = value.strip()
         else:
-            # 直接传入参数，根据工具类型智能推断
-            if tool_name == 'search':
-                param_dict = {'query': parameters}
-            elif tool_name == 'memory':
-                param_dict = {'action': 'search', 'query': parameters}
-            else:
-                param_dict = {'input': parameters}
+            # 直接传入参数，使用通用的 'input' 键
+            param_dict = {'input': parameters}
 
         return param_dict
     
@@ -241,7 +234,7 @@ class MySimpleAgent(SimpleAgent):
     def remove_tool(self, tool_name: str) -> bool:
         """移除工具（便利方法）"""
         if self.tool_registry:
-            self.tool_registry.unregister(tool_name)
+            self.tool_registry.unregister_tool(tool_name)
             return True
         return False
     
