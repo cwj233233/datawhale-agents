@@ -3,6 +3,19 @@
 1. 理解用户需求
 2. 使用Tavily API真实搜索信息  
 3. 生成基于搜索结果的回答
+
+环境变量配置：
+在项目目录下创建 .env 文件，配置以下变量：
+- LLM_API_KEY: DeepSeek API 密钥（必需）
+- LLM_MODEL_ID: 模型名称（默认: deepseek-chat）
+- LLM_BASE_URL: API 地址（默认: https://api.deepseek.com/v1）
+- TAVILY_API_KEY: Tavily 搜索 API 密钥（必需）
+
+示例 .env 文件：
+LLM_API_KEY=sk-your-deepseek-api-key
+LLM_MODEL_ID=deepseek-chat
+LLM_BASE_URL=https://api.deepseek.com/v1
+TAVILY_API_KEY=your-tavily-api-key
 """
 
 import asyncio
@@ -29,10 +42,14 @@ class SearchState(TypedDict):
     step: str             # 当前步骤
 
 # 初始化模型和Tavily客户端
+# 配置说明：
+# - 使用 DeepSeek API: base_url=https://api.deepseek.com/v1, model=deepseek-chat
+# - 使用 OpenAI API: base_url=https://api.openai.com/v1, model=gpt-4o-mini
+# - 使用其他兼容 OpenAI 的 API: 修改 base_url 和 model 即可
 llm = ChatOpenAI(
-    model=os.getenv("LLM_MODEL_ID", "gpt-4o-mini"),
+    model=os.getenv("LLM_MODEL_ID", "deepseek-chat"),
     api_key=os.getenv("LLM_API_KEY"),
-    base_url=os.getenv("LLM_BASE_URL", "https://api.openai.com/v1"),
+    base_url=os.getenv("LLM_BASE_URL", "https://api.deepseek.com/v1"),
     temperature=0.7
 )
 
@@ -197,13 +214,25 @@ async def main():
     """主函数：运行智能搜索助手"""
     
     # 检查API密钥
+    if not os.getenv("LLM_API_KEY"):
+        print("❌ 错误：请在.env文件中配置LLM_API_KEY")
+        print("   示例：LLM_API_KEY=sk-your-deepseek-api-key")
+        return
+    
     if not os.getenv("TAVILY_API_KEY"):
         print("❌ 错误：请在.env文件中配置TAVILY_API_KEY")
         return
     
     app = create_search_assistant()
     
+    # 显示配置信息
+    model_id = os.getenv("LLM_MODEL_ID", "deepseek-chat")
+    base_url = os.getenv("LLM_BASE_URL", "https://api.deepseek.com/v1")
+    
     print("🔍 智能搜索助手启动！")
+    print(f"📌 当前配置：")
+    print(f"   LLM模型: {model_id}")
+    print(f"   API地址: {base_url}")
     print("我会使用Tavily API为您搜索最新、最准确的信息")
     print("支持各种问题：新闻、技术、知识问答等")
     print("(输入 'quit' 退出)\n")
